@@ -11,3 +11,48 @@ CREATE TABLE dbo.table_product_demand (
 
 COPY dbo.table_product_demand(shop_id, date, product_name, demand)
 FROM '/data/table_product_demand.csv' DELIMITER ',' CSV HEADER;
+
+
+CREATE SCHEMA IF NOT EXISTS wh;
+
+DROP TABLE IF EXISTS dbo.table_online_retail_origin;
+
+            
+CREATE TABLE dbo.table_online_retail_origin (
+                id INT,
+                Invoice VARCHAR(100),
+                StockCode VARCHAR(100),
+                Description VARCHAR(100),
+                Quantity INT,
+                InvoiceDate TIMESTAMP,
+                Price FLOAT,
+                Customer_ID VARCHAR(100),
+                Country VARCHAR(100),
+                last_updated TIMESTAMP,
+                constraint table_online_retail_origin_pk primary key (id)
+            );
+
+COPY dbo.table_online_retail_origin(id, Invoice, StockCode, Description,Quantity,InvoiceDate,Price,Customer_ID,Country,last_updated)
+FROM '/data/online_retail_origin.csv' DELIMITER ',' CSV HEADER;
+
+
+DROP TABLE IF EXISTS dbo.table_online_retail_stage;
+
+CREATE TABLE dbo.table_online_retail_stage (
+                id INT,
+                Invoice VARCHAR(100),
+                StockCode VARCHAR(100),
+                Description VARCHAR(100),
+                Quantity INT,
+                InvoiceDate TIMESTAMP,
+                Price FLOAT,
+                Customer_ID VARCHAR(100),
+                Country VARCHAR(100),
+                last_updated TIMESTAMP,
+                operation char(1),
+                constraint table_online_retail_stage_pk primary key (id, last_updated)
+            );
+
+COPY dbo.table_online_retail_stage(id, Invoice, StockCode, Description, Quantity, InvoiceDate, Price, Customer_ID, Country, last_updated, operation)
+FROM '/data/online_retail_stage.csv' DELIMITER ',' CSV HEADER;
+

@@ -71,11 +71,11 @@ with DAG(
         task_id='create_online_retail_origin_in_data_warehouse',
         postgres_conn_id="pg_container",
         sql=f"""
-            DROP TABLE IF EXISTS dbo.table_online_retail_origin;
+            DROP TABLE IF EXISTS wh.table_online_retail_origin;
 
             
 
-            CREATE TABLE dbo.table_online_retail_origin (
+            CREATE TABLE wh.table_online_retail_origin (
                 id INT,
                 Invoice VARCHAR(100),
                 StockCode VARCHAR(100),
