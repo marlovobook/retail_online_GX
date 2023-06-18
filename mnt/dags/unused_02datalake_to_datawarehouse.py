@@ -159,7 +159,7 @@ default_args = {
     'catchup' : False, 
 }
 with DAG(
-    dag_id='02_datalake_to_datawarehouseV02',
+    dag_id='unused_02_datalake_to_datawarehouseV02',
     default_args=default_args,
     description='Copy file from PostgreSQL to MinIO, transform data in S3, and upload back to PostgreSQL',
     schedule_interval='@daily',  # Set your desired schedule interval

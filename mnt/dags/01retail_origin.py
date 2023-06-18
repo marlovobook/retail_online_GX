@@ -57,9 +57,10 @@ default_args = {
 with DAG(
     dag_id='01_retail_origin',
     default_args=default_args,
-    description='Copy online_retail_origin file from local',
-    schedule_interval=None,  # Set your desired schedule interval '@daily'
-    start_date=datetime(2023, 4, 25),  # Set the start date of the DAG
+    description='Incrementally Copy online_retail_origin file from local',
+    schedule_interval="@daily",  # Set your desired schedule interval '@daily'
+    start_date=datetime(2009, 12, 1),  # Set the start date of the DAG
+    end_date=datetime(2009, 12, 3)
 
 )as dags:
     
@@ -67,41 +68,76 @@ with DAG(
 
 
     #Create Table in postgres
-    upload_retail_origin = PostgresOperator(
-        task_id='create_online_retail_origin_in_data_warehouse',
-        postgres_conn_id="pg_container",
-        sql=f"""
-            DROP TABLE IF EXISTS wh.table_online_retail_origin;
+    # upload_retail_origin = PostgresOperator(
+    #     task_id='create_online_retail_origin_in_data_warehouse',
+    #     postgres_conn_id="pg_container",
+    #     sql=f"""
+    #         DROP TABLE IF EXISTS wh.table_online_retail_origin;
 
             
 
-            CREATE TABLE wh.table_online_retail_origin (
-                id INT,
-                Invoice VARCHAR(100),
-                StockCode VARCHAR(100),
-                Description VARCHAR(100),
-                Quantity INT,
-                InvoiceDate TIMESTAMP,
-                Price FLOAT,
-                Customer_ID VARCHAR(100),
-                Country VARCHAR(100),
-                last_updated TIMESTAMP,
-                constraint table_online_retail_origin_pk primary key (id)
-            );
+    #         CREATE TABLE wh.table_online_retail_origin (
+    #             id INT,
+    #             Invoice VARCHAR(100),
+    #             StockCode VARCHAR(100),
+    #             Description VARCHAR(100),
+    #             Quantity INT,
+    #             InvoiceDate TIMESTAMP,
+    #             Price FLOAT,
+    #             Customer_ID VARCHAR(100),
+    #             Country VARCHAR(100),
+    #             last_updated TIMESTAMP,
+    #             constraint table_online_retail_origin_pk primary key (id)
+    #         );
 
             
         
-        """,
-    )
+    #     """,
+    # )
     
     #Call the _load_data function
     
-    load_data = PythonOperator(
-        task_id="load_data",
-        python_callable=_load_data,
+    # load_data = PythonOperator(
+    #     task_id="load_data",
+    #     python_callable=_load_data,
+    # )
+
+    insert_original_data = PostgresOperator(
+        task_id="insert_original_data",
+        postgres_conn_id="pg_container",
+        sql=f"""
+            INSERT INTO wh.table_online_retail_origin (
+                id,
+                Invoice,
+                StockCode,
+                Description,
+                Quantity,
+                InvoiceDate,
+                Price,
+                Customer_ID,
+                Country,
+                last_updated
+            )
+            SELECT
+                id,
+                Invoice,
+                StockCode,
+                Description,
+                Quantity,
+                InvoiceDate,
+                Price,
+                Customer_ID,
+                Country,
+                last_updated
+            FROM
+                dbo.table_online_retail_origin
+
+            WHERE
+                last_updated >= '{{{{ds}}}}' AND last_updated < '{{{{next_ds}}}}'
+        """,
     )
     end = DummyOperator(task_id='end')
 
     # Set task dependencies
-    start >> upload_retail_origin >> load_data >> end
+    start >> insert_original_data >> end
     

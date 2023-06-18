@@ -36,7 +36,7 @@ default_args = {
 }
 # Define your DAG
 with DAG(
-    dag_id='01_database_to_datalake',
+    dag_id='unused_01_database_to_datalake',
     default_args=default_args,
     description='Copy file from PostgreSQL(database) to MinIO(datalake), the transform and load will be in another dag file',
     schedule_interval='@daily',  # Set your desired schedule interval '@daily'

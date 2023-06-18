@@ -13,7 +13,9 @@ COPY dbo.table_product_demand(shop_id, date, product_name, demand)
 FROM '/data/table_product_demand.csv' DELIMITER ',' CSV HEADER;
 
 
+set datestyle = 'ISO, YMD';
 CREATE SCHEMA IF NOT EXISTS wh;
+
 
 DROP TABLE IF EXISTS dbo.table_online_retail_origin;
 
@@ -24,11 +26,11 @@ CREATE TABLE dbo.table_online_retail_origin (
                 StockCode VARCHAR(100),
                 Description VARCHAR(100),
                 Quantity INT,
-                InvoiceDate TIMESTAMP,
+                InvoiceDate DATE DEFAULT CURRENT_DATE,
                 Price FLOAT,
                 Customer_ID VARCHAR(100),
                 Country VARCHAR(100),
-                last_updated TIMESTAMP,
+                last_updated DATE DEFAULT CURRENT_DATE,
                 constraint table_online_retail_origin_pk primary key (id)
             );
 
@@ -44,11 +46,11 @@ CREATE TABLE dbo.table_online_retail_stage (
                 StockCode VARCHAR(100),
                 Description VARCHAR(100),
                 Quantity INT,
-                InvoiceDate TIMESTAMP,
+                InvoiceDate DATE DEFAULT CURRENT_DATE,
                 Price FLOAT,
                 Customer_ID VARCHAR(100),
                 Country VARCHAR(100),
-                last_updated TIMESTAMP,
+                last_updated DATE DEFAULT CURRENT_DATE,
                 operation char(1),
                 constraint table_online_retail_stage_pk primary key (id, last_updated)
             );
@@ -56,3 +58,18 @@ CREATE TABLE dbo.table_online_retail_stage (
 COPY dbo.table_online_retail_stage(id, Invoice, StockCode, Description, Quantity, InvoiceDate, Price, Customer_ID, Country, last_updated, operation)
 FROM '/data/online_retail_stage.csv' DELIMITER ',' CSV HEADER;
 
+
+DROP TABLE IF EXISTS wh.table_online_retail_origin;
+CREATE TABLE wh.table_online_retail_origin (
+                id INT,
+                Invoice VARCHAR(100),
+                StockCode VARCHAR(100),
+                Description VARCHAR(100),
+                Quantity INT,
+                InvoiceDate DATE,
+                Price FLOAT,
+                Customer_ID VARCHAR(100),
+                Country VARCHAR(100),
+                last_updated DATE,
+                constraint table_online_retail_origin_pk primary key (id)
+            );
