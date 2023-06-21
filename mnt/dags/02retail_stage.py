@@ -69,24 +69,26 @@ with DAG(
 
 )as dags:
     
-    start = DummyOperator(task_id="start")
-
-    # ext_task_sensor = ExternalTaskSensor(
+    ext_task_sensor = ExternalTaskSensor(
         
-    #     #allowed_states will be ['success'] by default 
-    #     #meaning this task will be success only the targeted task is in success stage
-    #     task_id='check_product_demand_files',
-    #     external_dag_id='01_database_to_datalake',
-    #     external_task_id='fetch_from_database',
-    #     # the worker wil poke to find the successful every 30s and stop working after 1800s
-    #     timeout=1800,
-    #     poke_interval=30,
+        #allowed_states will be ['success'] by default 
+        #meaning this task will be success only the targeted task is in success stage
+        task_id='check_online_retail_data',
+        external_dag_id='01_retail_origin',
+        external_task_id='insert_original_data',
+        # the worker wil poke to find the successful every 30s and stop working after 1800s
+        timeout=1800,
+        poke_interval=30,
 
-    #     # Two mode:
-    #     ## 'poke' = stand by mode while waiting for next poke
-    #     ### 'reschedule' = sensor will terminate inself until the next poke
-    #     mode='reschedule'
-    # )
+        # Two mode:
+        ## 'poke' = stand by mode while waiting for next poke
+        ### 'reschedule' = sensor will terminate inself until the next poke
+        mode='reschedule'
+    )
+    
+    data_quality_check = DummyOperator(task_id="data_quality_check")
+
+
 
 
 
@@ -224,5 +226,6 @@ with DAG(
     
 
     # Set task dependencies
-    start  >> merge_changes_table  >> end
+
+    ext_task_sensor >> data_quality_check  >> merge_changes_table  >> end
     
