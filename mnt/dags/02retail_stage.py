@@ -71,91 +71,94 @@ with DAG(
     
     start = DummyOperator(task_id="start")
 
-    ext_task_sensor = DummyOperator(
+    # ext_task_sensor = ExternalTaskSensor(
         
-        #allowed_states will be ['success'] by default 
-        #meaning this task will be success only the targeted task is in success stage
-        task_id='check_product_demand_files',
-        external_dag_id='01_database_to_datalake',
-        external_task_id='fetch_from_database',
-        # the worker wil poke to find the successful every 30s and stop working after 1800s
-        timeout=1800,
-        poke_interval=30,
+    #     #allowed_states will be ['success'] by default 
+    #     #meaning this task will be success only the targeted task is in success stage
+    #     task_id='check_product_demand_files',
+    #     external_dag_id='01_database_to_datalake',
+    #     external_task_id='fetch_from_database',
+    #     # the worker wil poke to find the successful every 30s and stop working after 1800s
+    #     timeout=1800,
+    #     poke_interval=30,
 
-        # Two mode:
-        ## 'poke' = stand by mode while waiting for next poke
-        ### 'reschedule' = sensor will terminate inself until the next poke
-        mode='reschedule'
-    )
+    #     # Two mode:
+    #     ## 'poke' = stand by mode while waiting for next poke
+    #     ### 'reschedule' = sensor will terminate inself until the next poke
+    #     mode='reschedule'
+    # )
 
-    create_retail_stage = PostgresOperator(
-        task_id='create_online_retail_stage_in_data_warehouse',
-        postgres_conn_id="pg_container",
-        sql=f"""
-            DROP TABLE IF EXISTS wh.table_online_retail_stage;
 
-            CREATE TABLE wh.table_online_retail_stage (
-                id INT,
-                Invoice VARCHAR(100),
-                StockCode VARCHAR(100),
-                Description VARCHAR(100),
-                Quantity INT,
-                InvoiceDate TIMESTAMP,
-                Price FLOAT,
-                Customer_ID VARCHAR(100),
-                Country VARCHAR(100),
-                last_updated TIMESTAMP,
-                operation char(1),
-                constraint table_online_retail_stage_pk primary key (id, last_updated)
-            );
+
+    # create_retail_stage = PostgresOperator(
+    #     task_id='create_online_retail_stage_in_data_warehouse',
+    #     postgres_conn_id="pg_container",
+    #     sql=f"""
+    #         DROP TABLE IF EXISTS wh.table_online_retail_stage;
+
+    #         CREATE TABLE wh.table_online_retail_stage (
+    #             id INT,
+    #             Invoice VARCHAR(100),
+    #             StockCode VARCHAR(100),
+    #             Description VARCHAR(100),
+    #             Quantity INT,
+    #             InvoiceDate TIMESTAMP (CURRENT_DATE::TIMESTAMP),
+    #             Price FLOAT,
+    #             Customer_ID VARCHAR(100),
+    #             Country VARCHAR(100),
+    #             last_updated TIMESTAMP (CURRENT_DATE::TIMESTAMP),
+    #             operation char(1),
+    #             constraint table_online_retail_stage_pk primary key (id, last_updated)
+    #         );
 
             
         
-        """,
-    )
+    #     """,
+    # )
+
     """
     Incremental latest data
-    
     """
-    insert_retail_stage = PostgresOperator(
-        task_id="insert_retail_stage",
-        postgres_conn_id="pg_container",
-        sql=f"""
-            INSERT INTO wh.table_online_retail_stage (
-                id,
-                Invoice,
-                StockCode,
-                Description,
-                Quantity,
-                InvoiceDate,
-                Price,
-                Customer_ID,
-                Country,
-                last_updated,
-                operation
-            )
-            SELECT
-                id,
-                Invoice,
-                StockCode,
-                Description,
-                Quantity,
-                InvoiceDate,
-                Price,
-                Customer_ID,
-                Country,
-                last_updated,
-                operation
-            FROM
-                dbo.table_online_retail_stage
 
-            WHERE
-                InvoiceDate >= '{{{{ds}}}}' AND InvoiceDate < '{{{{next_ds}}}}'
-        """,
-    )
+    # insert_retail_stage = PostgresOperator(
+    #     task_id="insert_retail_stage",
+    #     postgres_conn_id="pg_container",
+    #     sql=f"""
+    #         INSERT INTO wh.table_online_retail_stage (
+    #             id,
+    #             Invoice,
+    #             StockCode,
+    #             Description,
+    #             Quantity,
+    #             InvoiceDate,
+    #             Price,
+    #             Customer_ID,
+    #             Country,
+    #             last_updated,
+    #             operation
+    #         )
+    #         SELECT
+    #             id,
+    #             Invoice,
+    #             StockCode,
+    #             Description,
+    #             Quantity,
+    #             InvoiceDate,
+    #             Price,
+    #             Customer_ID,
+    #             Country,
+    #             last_updated,
+    #             operation
+    #         FROM
+    #             dbo.table_online_retail_stage
+
+    #         WHERE
+    #             InvoiceDate >= '{{{{ds}}}}' AND InvoiceDate < '{{{{next_ds}}}}'
+    #     """,
+    # )
 
     #merge the changes from staging table into target table
-    #possible to make in incremental load
+    #possible to make in incremental load ###ww
 
     merge_changes_table = PostgresOperator(
         task_id = "merge_chages",
@@ -176,14 +179,15 @@ with DAG(
                     first_value(country) over w as country, 
                     first_value(last_updated) over w as last_updated, 
                     first_value(operation) over w as operation
-                FROM wh.table_online_retail_stage
+                FROM dbo.table_online_retail_stage
+                WHERE InvoiceDate >= '{{{{ds}}}}' AND InvoiceDate < '{{{{next_ds}}}}'
                     window w as (partition by id order by last_updated desc)
                 order by id
 
             ) cdc
             on wh.table_online_retail_origin.id=cdc.id
             when not matched and cdc.operation='I' then
-                insert values(cdc.id, cdc.invoice, cdc.stockcode, cdc.description, cdc.quantity, cdc.invoicedate, cdc.price, cdc.customer_id, cdc.country, cdc.last_updated)
+                insert values(cdc.id, cdc.invoice, cdc.stockcode, cdc.description, cdc.quantity, cdc.invoicedate, cdc.price, cdc.customer_id, cdc.country, cdc.last_updated, cdc.operation)
             when matched and cdc.operation='D' then
                 delete
             when matched and cdc.operation='U' then
@@ -195,9 +199,9 @@ with DAG(
                             price=cdc.price,
                             customer_id=cdc.customer_id,
                             country=cdc.country,
-                            last_updated=cdc.last_updated
+                            last_updated=cdc.last_updated,
+                            operation=cdc.operation
             ;
-;
 
         """
     )
@@ -207,18 +211,18 @@ with DAG(
     #     python_callable=_load_data_stage,
     # )
    
-    delete_staged_table = PostgresOperator(
-        task_id="delete_staged_table",
-        postgres_conn_id="pg_container",
-        sql="""
-            DELETE FROM wh.table_online_retail_stage
-        """,
-    )
+    # delete_staged_table = PostgresOperator(
+    #     task_id="delete_staged_table",
+    #     postgres_conn_id="pg_container",
+    #     sql="""
+    #         DELETE FROM wh.table_online_retail_stage
+    #     """,
+    # )
 
     end = DummyOperator(task_id='end')
 
     
 
     # Set task dependencies
-    ext_task_sensor >> start >> create_retail_stage >> insert_retail_stage >> merge_changes_table >> delete_staged_table >> end
+    start  >> merge_changes_table  >> end
     
