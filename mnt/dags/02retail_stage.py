@@ -86,7 +86,12 @@ with DAG(
         mode='reschedule'
     )
     
-    data_quality_check = DummyOperator(task_id="data_quality_check")
+    """
+    Using pythom Assertion
+    """
+    data_quality_check = DummyOperator(
+        task_id="data_quality_check"
+        )
 
 
 
