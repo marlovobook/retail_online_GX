@@ -136,8 +136,11 @@ with DAG(
                 InvoiceDate >= '{{{{ds}}}}' AND InvoiceDate < '{{{{next_ds}}}}'
         """,
     )
+
+    to_datalake = DummyOperator(task_id='to_lake')
+
     end = DummyOperator(task_id='end')
 
     # Set task dependencies
-    start >> insert_original_data >> end
+    start >> insert_original_data >> to_datalake >> end
     

@@ -12,6 +12,7 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.amazon.aws.transfers.sql_to_s3 import SqlToS3Operator
+from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
 from airflow.operators.dummy import DummyOperator
@@ -69,6 +70,23 @@ with DAG(
 )as dags:
     
     start = DummyOperator(task_id="start")
+
+    ext_task_sensor = DummyOperator(
+        
+        #allowed_states will be ['success'] by default 
+        #meaning this task will be success only the targeted task is in success stage
+        task_id='check_product_demand_files',
+        external_dag_id='01_database_to_datalake',
+        external_task_id='fetch_from_database',
+        # the worker wil poke to find the successful every 30s and stop working after 1800s
+        timeout=1800,
+        poke_interval=30,
+
+        # Two mode:
+        ## 'poke' = stand by mode while waiting for next poke
+        ### 'reschedule' = sensor will terminate inself until the next poke
+        mode='reschedule'
+    )
 
     create_retail_stage = PostgresOperator(
         task_id='create_online_retail_stage_in_data_warehouse',
@@ -202,5 +220,5 @@ with DAG(
     
 
     # Set task dependencies
-    start >> create_retail_stage >> insert_retail_stage >> merge_changes_table >> delete_staged_table >> end
+    ext_task_sensor >> start >> create_retail_stage >> insert_retail_stage >> merge_changes_table >> delete_staged_table >> end
     
