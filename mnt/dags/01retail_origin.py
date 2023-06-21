@@ -133,7 +133,7 @@ with DAG(
                 dbo.table_online_retail_origin
 
             WHERE
-                last_updated >= '{{{{ds}}}}' AND last_updated < '{{{{next_ds}}}}'
+                InvoiceDate >= '{{{{ds}}}}' AND InvoiceDate < '{{{{next_ds}}}}'
         """,
     )
     end = DummyOperator(task_id='end')

@@ -12,3 +12,7 @@ logs/
 
 #
 *.csv
+
+# Excel
+
+*.xlsx

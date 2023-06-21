@@ -26,11 +26,11 @@ CREATE TABLE dbo.table_online_retail_origin (
                 StockCode VARCHAR(100),
                 Description VARCHAR(100),
                 Quantity INT,
-                InvoiceDate DATE DEFAULT CURRENT_DATE,
+                InvoiceDate DATE DEFAULT (CURRENT_DATE::DATE),
                 Price FLOAT,
                 Customer_ID VARCHAR(100),
                 Country VARCHAR(100),
-                last_updated DATE DEFAULT CURRENT_DATE,
+                last_updated DATE DEFAULT (CURRENT_DATE::DATE),
                 constraint table_online_retail_origin_pk primary key (id)
             );
 
@@ -46,11 +46,11 @@ CREATE TABLE dbo.table_online_retail_stage (
                 StockCode VARCHAR(100),
                 Description VARCHAR(100),
                 Quantity INT,
-                InvoiceDate DATE DEFAULT CURRENT_DATE,
+                InvoiceDate DATE DEFAULT (CURRENT_DATE::DATE),
                 Price FLOAT,
                 Customer_ID VARCHAR(100),
                 Country VARCHAR(100),
-                last_updated DATE DEFAULT CURRENT_DATE,
+                last_updated DATE DEFAULT (CURRENT_DATE::DATE),
                 operation char(1),
                 constraint table_online_retail_stage_pk primary key (id, last_updated)
             );

@@ -19,29 +19,29 @@ from airflow.operators.dummy import DummyOperator
 
 #Create function for loading staged table into postgres
 
-def _load_data_stage():
+# def _load_data_stage():
 
-    postgres_hook = PostgresHook(postgres_conn_id='pg_container')
-    conn = postgres_hook.get_conn()
-    cursor = conn.cursor()
+#     postgres_hook = PostgresHook(postgres_conn_id='pg_container')
+#     conn = postgres_hook.get_conn()
+#     cursor = conn.cursor()
     
-    file_name = 'dags/temp/online_retail_stage.csv'
+#     file_name = 'dags/temp/online_retail_stage.csv'
 
-    #Copy_expery needs to call file_name
-    #STDIN means Standard Input = an input stream where data issent to and read by a program
-    #In this case, it is file_name variable
-    postgres_hook.copy_expert(
+#     #Copy_expery needs to call file_name
+#     #STDIN means Standard Input = an input stream where data issent to and read by a program
+#     #In this case, it is file_name variable
+#     postgres_hook.copy_expert(
 
-        """
-            COPY 
-                dbo.table_online_retail_stage(id, Invoice, StockCode, Description,Quantity,InvoiceDate,Price,Customer_ID,Country,last_updated, operation)
+#         """
+#             COPY 
+#                 dbo.table_online_retail_stage(id, Invoice, StockCode, Description,Quantity,InvoiceDate,Price,Customer_ID,Country,last_updated, operation)
             
-            FROM STDIN DELIMITER ',' CSV HEADER
+#             FROM STDIN DELIMITER ',' CSV HEADER
 
-        """,
-        file_name,
+#         """,
+#         file_name,
 
-    )
+#     )
 
 
 
@@ -62,20 +62,21 @@ with DAG(
     dag_id='02_retail_stage',
     default_args=default_args,
     description='Copy online_retail_stage file from local',
-    schedule_interval=None,  # Set your desired schedule interval '@daily'
-    start_date=datetime(2023, 4, 25),  # Set the start date of the DAG
+    schedule_interval="@daily",  # Set your desired schedule interval '@daily'
+    start_date=datetime(2009, 12, 1),  # Set the start date of the DAG
+    end_date=datetime(2009, 12, 3) # Set the end date of the DAG
 
 )as dags:
     
     start = DummyOperator(task_id="start")
 
-    upload_retail_stage = PostgresOperator(
+    create_retail_stage = PostgresOperator(
         task_id='create_online_retail_stage_in_data_warehouse',
         postgres_conn_id="pg_container",
         sql=f"""
-            DROP TABLE IF EXISTS dbo.table_online_retail_stage;
+            DROP TABLE IF EXISTS wh.table_online_retail_stage;
 
-            CREATE TABLE dbo.table_online_retail_stage (
+            CREATE TABLE wh.table_online_retail_stage (
                 id INT,
                 Invoice VARCHAR(100),
                 StockCode VARCHAR(100),
@@ -94,6 +95,46 @@ with DAG(
         
         """,
     )
+    """
+    Incremental latest data
+    
+    """
+    insert_retail_stage = PostgresOperator(
+        task_id="insert_retail_stage",
+        postgres_conn_id="pg_container",
+        sql=f"""
+            INSERT INTO wh.table_online_retail_stage (
+                id,
+                Invoice,
+                StockCode,
+                Description,
+                Quantity,
+                InvoiceDate,
+                Price,
+                Customer_ID,
+                Country,
+                last_updated,
+                operation
+            )
+            SELECT
+                id,
+                Invoice,
+                StockCode,
+                Description,
+                Quantity,
+                InvoiceDate,
+                Price,
+                Customer_ID,
+                Country,
+                last_updated,
+                operation
+            FROM
+                dbo.table_online_retail_stage
+
+            WHERE
+                InvoiceDate >= '{{{{ds}}}}' AND InvoiceDate < '{{{{next_ds}}}}'
+        """,
+    )
 
     #merge the changes from staging table into target table
     #possible to make in incremental load
@@ -103,7 +144,7 @@ with DAG(
         postgres_conn_id="pg_container",
         sql =f"""
 
-            merge into dbo.table_online_retail_origin
+            merge into wh.table_online_retail_origin
             using
             (
                 SELECT distinct id,
@@ -117,12 +158,12 @@ with DAG(
                     first_value(country) over w as country, 
                     first_value(last_updated) over w as last_updated, 
                     first_value(operation) over w as operation
-                FROM dbo.table_online_retail_stage
+                FROM wh.table_online_retail_stage
                     window w as (partition by id order by last_updated desc)
                 order by id
 
             ) cdc
-            on dbo.table_online_retail_origin.id=cdc.id
+            on wh.table_online_retail_origin.id=cdc.id
             when not matched and cdc.operation='I' then
                 insert values(cdc.id, cdc.invoice, cdc.stockcode, cdc.description, cdc.quantity, cdc.invoicedate, cdc.price, cdc.customer_id, cdc.country, cdc.last_updated)
             when matched and cdc.operation='D' then
@@ -143,14 +184,23 @@ with DAG(
         """
     )
 
-    load_data = PythonOperator(
-        task_id="load_data_stage",
-        python_callable=_load_data_stage,
+    # load_data = PythonOperator(
+    #     task_id="load_data_stage",
+    #     python_callable=_load_data_stage,
+    # )
+   
+    delete_staged_table = PostgresOperator(
+        task_id="delete_staged_table",
+        postgres_conn_id="pg_container",
+        sql="""
+            DELETE FROM wh.table_online_retail_stage
+        """,
     )
-    delete_temp_table = DummyOperator(task_id='delete_temp_table')
+
+    end = DummyOperator(task_id='end')
 
     
 
     # Set task dependencies
-    start >> upload_retail_stage >> load_data >> merge_changes_table >> delete_temp_table
+    start >> create_retail_stage >> insert_retail_stage >> merge_changes_table >> delete_staged_table >> end
     
