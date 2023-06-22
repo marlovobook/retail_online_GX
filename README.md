@@ -25,7 +25,7 @@ docker inspect pg_container
 
 Ref in doing this : http://www.dbaglobe.com/2022/07/use-merge-feature-in-postgresql-15-to.html
 -----
-
+Dataset https://www.kaggle.com/datasets/mashlyn/online-retail-ii-uci?resource=download
 ---
 # What is it about
 This Data pipeline has shown the simple CDC (Change Data Capture) in query-based with Merge on Postgres.
