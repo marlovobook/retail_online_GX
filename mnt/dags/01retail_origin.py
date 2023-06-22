@@ -60,7 +60,7 @@ with DAG(
     description='Incrementally Copy online_retail_origin file from local',
     schedule_interval="@daily",  # Set your desired schedule interval '@daily'
     start_date=datetime(2009, 12, 1),  # Set the start date of the DAG
-    end_date=datetime(2009, 12, 3)
+    end_date=datetime(2009, 12, 6)# end
 
 )as dags:
     

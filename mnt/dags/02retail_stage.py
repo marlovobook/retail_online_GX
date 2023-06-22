@@ -16,7 +16,7 @@ from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.hooks.S3_hook import S3Hook
 from airflow.operators.dummy import DummyOperator
-
+from airflow.providers.common.sql.operators.sql import SQLColumnCheckOperator
 
 #Create function for loading staged table into postgres
 
@@ -69,7 +69,7 @@ with DAG(
     description='Copy online_retail_stage file from local',
     schedule_interval="@daily",  # Set your desired schedule interval '@daily'
     start_date=datetime(2009, 12, 1),  # Set the start date of the DAG
-    end_date=datetime(2009, 12, 3) # Set the end date of the DAG
+    end_date=datetime(2009, 12, 6) # Set the end date of the DAG
 
 )as dags:
     
@@ -98,6 +98,44 @@ with DAG(
         )
 
 
+
+    column_check = SQLColumnCheckOperator(
+
+            task_id='SQLColumnCheckOperator_task',
+            table='wh.table_online_retail_origin',
+            column_mapping={
+                "id" : {
+
+                    #count that there are 0 row of null
+                    "null_check" : {
+                        "equal_to" : 0,
+                        
+                        #tolerance is a percentage 
+                        #that the result may be out of bounds 
+                        #but still considered successful.
+                        # 0 = 0%; 1 = 100%
+                        "tolerance" : 0,    
+                    }
+                },
+
+                "quantity" : {
+                    "null_check" : {
+                        "equal_to" : 0,
+                    },
+
+                    "min" : {
+                        "geq_to" : -1012
+                    }
+                }
+
+            },
+
+            partition_clause=None,
+            conn_id='pg_container',
+            database=None,
+            accept_none=True,
+
+        )
 
 
 
@@ -236,5 +274,5 @@ with DAG(
 
     # Set task dependencies
 
-    ext_task_sensor >> data_quality_check  >> merge_changes_table  >> end
+    ext_task_sensor >> data_quality_check  >> merge_changes_table  >> column_check >> end
     
