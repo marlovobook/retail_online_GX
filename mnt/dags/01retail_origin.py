@@ -60,7 +60,7 @@ with DAG(
     description='Incrementally Copy online_retail_origin file from local',
     schedule_interval="@daily",  # Set your desired schedule interval '@daily'
     start_date=datetime(2009, 12, 1),  # Set the start date of the DAG
-    end_date=datetime(2009, 12, 3)
+    end_date=datetime(2009, 12, 6)# end
 
 )as dags:
     
@@ -101,11 +101,37 @@ with DAG(
     #     task_id="load_data",
     #     python_callable=_load_data,
     # )
+    #DROP TABLE IF EXISTS wh.table_online_retail_origin;
+
+    create_retail_origin = PostgresOperator(
+        task_id='create_online_retail_origin_in_data_warehouse',
+        postgres_conn_id="pg_container",
+        sql=f"""
+            
+
+            CREATE TABLE IF NOT EXISTS wh.table_online_retail_origin (
+                id INT,
+                Invoice VARCHAR(100),
+                StockCode VARCHAR(100),
+                Description VARCHAR(100),
+                Quantity INT,
+                InvoiceDate TIMESTAMP,
+                Price FLOAT,
+                Customer_ID VARCHAR(100),
+                Country VARCHAR(100),
+                last_updated TIMESTAMP,
+                operation char(1),
+                constraint table_online_retail_stage_pk primary key (id, last_updated)
+            );
+
+        """,
+    )
 
     insert_original_data = PostgresOperator(
         task_id="insert_original_data",
         postgres_conn_id="pg_container",
         sql=f"""
+
             INSERT INTO wh.table_online_retail_origin (
                 id,
                 Invoice,
@@ -116,7 +142,8 @@ with DAG(
                 Price,
                 Customer_ID,
                 Country,
-                last_updated
+                last_updated,
+                operation
             )
             SELECT
                 id,
@@ -128,7 +155,8 @@ with DAG(
                 Price,
                 Customer_ID,
                 Country,
-                last_updated
+                last_updated,
+                operation
             FROM
                 dbo.table_online_retail_origin
 
@@ -141,6 +169,6 @@ with DAG(
 
     end = DummyOperator(task_id='end')
 
-    # Set task dependencies
-    start >> insert_original_data >> to_datalake >> end
+    # Set task dependenciessssdd
+    start >> create_retail_origin >> insert_original_data >> to_datalake >> end
     

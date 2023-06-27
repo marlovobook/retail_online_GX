@@ -26,16 +26,16 @@ CREATE TABLE dbo.table_online_retail_origin (
                 StockCode VARCHAR(100),
                 Description VARCHAR(100),
                 Quantity INT,
-                InvoiceDate DATE DEFAULT (CURRENT_DATE::DATE),
+                InvoiceDate TIMESTAMP DEFAULT (CURRENT_DATE::TIMESTAMP),
                 Price FLOAT,
                 Customer_ID VARCHAR(100),
                 Country VARCHAR(100),
-                last_updated DATE DEFAULT (CURRENT_DATE::DATE),
+                last_updated TIMESTAMP DEFAULT (CURRENT_DATE::TIMESTAMP),
                 operation char(1),
                 constraint table_online_retail_origin_pk primary key (id)
             );
 
-COPY dbo.table_online_retail_origin(id, Invoice, StockCode, Description,Quantity,InvoiceDate,Price,Customer_ID,Country,last_updated)
+COPY dbo.table_online_retail_origin(id, Invoice, StockCode, Description,Quantity,InvoiceDate,Price,Customer_ID,Country,last_updated,operation)
 FROM '/data/online_retail_origin.csv' DELIMITER ',' CSV HEADER;
 
 
@@ -47,11 +47,11 @@ CREATE TABLE dbo.table_online_retail_stage (
                 StockCode VARCHAR(100),
                 Description VARCHAR(100),
                 Quantity INT,
-                InvoiceDate DATE DEFAULT (CURRENT_DATE::DATE),
+                InvoiceDate TIMESTAMP DEFAULT (CURRENT_DATE::TIMESTAMP),
                 Price FLOAT,
                 Customer_ID VARCHAR(100),
                 Country VARCHAR(100),
-                last_updated DATE DEFAULT (CURRENT_DATE::DATE),
+                last_updated TIMESTAMP DEFAULT (CURRENT_DATE::TIMESTAMP),
                 operation char(1),
                 constraint table_online_retail_stage_pk primary key (id, last_updated)
             );
@@ -60,18 +60,18 @@ COPY dbo.table_online_retail_stage(id, Invoice, StockCode, Description, Quantity
 FROM '/data/online_retail_stage.csv' DELIMITER ',' CSV HEADER;
 
 
-DROP TABLE IF EXISTS wh.table_online_retail_origin;
-CREATE TABLE wh.table_online_retail_origin (
-                id INT,
-                Invoice VARCHAR(100),
-                StockCode VARCHAR(100),
-                Description VARCHAR(100),
-                Quantity INT,
-                InvoiceDate DATE DEFAULT (CURRENT_DATE::DATE),
-                Price FLOAT,
-                Customer_ID VARCHAR(100),
-                Country VARCHAR(100),
-                last_updated DATE DEFAULT (CURRENT_DATE::DATE),
-                operation char(1),
-                constraint table_online_retail_origin_pk primary key (id)
-            );
+-- DROP TABLE IF EXISTS wh.table_online_retail_origin;
+-- CREATE TABLE wh.table_online_retail_origin (
+--                 id INT,
+--                 Invoice VARCHAR(100),
+--                 StockCode VARCHAR(100),
+--                 Description VARCHAR(100),
+--                 Quantity INT,
+--                 InvoiceDate DATE DEFAULT (CURRENT_DATE::DATE),
+--                 Price FLOAT,
+--                 Customer_ID VARCHAR(100),
+--                 Country VARCHAR(100),
+--                 last_updated DATE DEFAULT (CURRENT_DATE::DATE),
+--                 operation char(1),
+--                 constraint table_online_retail_origin_pk primary key (id)
+--             );
